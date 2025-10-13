@@ -1,40 +1,242 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customizable Journal</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=IBM+Plex+Serif:wght@100&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="icon" href="/journal-app/helloKitty.png">
-    <meta property="og:title" content="Sarah World">
-    <meta property="og:description" content="Sarah's cool journal page!!!">
-    <meta property="og:image" content="https://sarah-lou.github.io/journal-app/helloKitty.png">
-    <meta property="og:url" content="https://sarah-lou.github.io/journal-app/">
-    <meta property="description" content="Sarah's cool journal page!!!">
-    <meta name="twitter:card" content="summary">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sarah’s Digital Garden</title>
+
+  <!-- Fonts: keep IBM Plex for body + add UnifrakturCook for gothic bubble text -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=IBM+Plex+Serif:wght@100;300&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --pink:#ffd1dc;
+      --blue:#cfe5ff;
+      --lav:#e5c7ff;
+      --ink:#3a2a5e;
+      --white:#ffffffee;
+    }
+
+    /* dreamy background */
+    body{
+      margin:0;
+      min-height:100svh;
+      font-family:"IBM Plex Serif", serif;
+      background: radial-gradient(1200px 600px at 10% 10%, var(--pink), transparent),
+                  radial-gradient(1000px 700px at 90% 30%, var(--blue), transparent),
+                  radial-gradient(900px 900px at 50% 110%, var(--lav), transparent),
+                  #ffeef7;
+      background-attachment: fixed;
+      color: var(--ink);
+      display:flex; flex-direction:column; align-items:center;
+    }
+
+    header{ text-align:center; padding:2rem 1rem .5rem; }
+    header h1{
+      margin:0 0 .25rem;
+      font-family:"DotGothic16", sans-serif;
+      letter-spacing:.5px;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+    }
+    header p{ opacity:.8; margin:.25rem 0 0; }
+
+    .controls{
+      width:min(900px, 92%);
+      display:flex; gap:.6rem; align-items:center; justify-content:center;
+      margin:.75rem auto 0; flex-wrap:wrap;
+    }
+    .controls input{
+      flex:1 1 280px;
+      border:1px solid #e6dff5; border-radius:999px;
+      padding:.7rem 1rem; background:#fff9ff; outline:none;
+    }
+
+    /* grid that holds the floating orbs */
+    .garden{
+      width:min(1100px, 94%);
+      margin:1.1rem auto 3rem;
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap:26px; /* a bit more space so floats don't bump */
+      position:relative;
+    }
+
+    /* ORB is a wrapper that floats (so .bubble hover scale still works) */
+    .orb{
+      display:flex; align-items:center; justify-content:center;
+      /* gentle float */
+      animation: drift 14s ease-in-out infinite alternate;
+      will-change: transform;
+    }
+
+    /* vary timing so they don’t move in sync */
+    .orb:nth-child(3n){ animation-duration: 16s; animation-delay: .6s; }
+    .orb:nth-child(4n){ animation-duration: 18s; animation-delay: 1.1s; }
+    .orb:nth-child(5n){ animation-duration: 20s; animation-delay: .2s; }
+    .orb:nth-child(7n){ animation-duration: 22s; animation-delay: 1.6s; }
+    @keyframes drift{
+      0%   { transform: translate(0px, 0px); }
+      25%  { transform: translate(8px, -10px); }
+      50%  { transform: translate(-6px, 6px); }
+      75%  { transform: translate(10px, 4px); }
+      100% { transform: translate(-8px, -6px); }
+    }
+
+    /* bubbles */
+    .bubble{
+      --size: clamp(120px, 20vw, 170px);
+      width:var(--size); height:var(--size);
+      border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      text-align:center; padding:18px;
+      background:
+        radial-gradient(120% 120% at 20% 15%, #ffffffaa, transparent 40%),
+        radial-gradient(circle at 70% 70%, #ffffff55, transparent 45%),
+        linear-gradient(135deg, #ffb7d6, #c9d8ff 60%, #e8c7ff);
+      color:#432b63; text-decoration:none;
+      box-shadow: 0 10px 28px rgba(66, 36, 102, .18);
+      position:relative; overflow:hidden;
+      transition: transform .25s ease, box-shadow .25s ease, filter .25s ease;
+      backdrop-filter: blur(1px);
+      border: 1px solid #ffffff66;
+      isolation:isolate;
+      user-select:none;
+    }
+    .bubble:hover{
+      transform: scale(1.04);
+      box-shadow: 0 16px 36px rgba(66, 36, 102, .24);
+      filter: saturate(1.08);
+    }
+    .bubble span{
+      font-family:"DotGothic16", sans-serif;   /* ✨ soooOooOooo digitallllll */
+      font-size: 1.05rem;
+      line-height:1.15;
+      letter-spacing:.3px;
+      text-shadow: 0 1px 0 #ffffffaa;
+    }
+    /* sparkle */
+    .bubble::after{
+      content:""; position:absolute; inset:-20%;
+      background: radial-gradient(40px 40px at 10% 10%, #fff8 0, #fff0 70%),
+                  radial-gradient(60px 60px at 80% 30%, #fff6 0, #fff0 70%);
+      mix-blend-mode: screen; pointer-events:none;
+      animation: twinkle 6s ease-in-out infinite alternate;
+    }
+    @keyframes twinkle{
+      from{ transform: translate(-5px, -6px); }
+      to  { transform: translate(6px, 5px); }
+    }
+
+    dialog{
+      border:none; border-radius:16px; width:min(720px, 92%);
+      background: var(--white); padding: 1.25rem 1.25rem 1rem;
+      box-shadow: 0 30px 60px rgba(36, 24, 58, .25);
+    }
+    dialog::backdrop{ background: rgba(33,12,48,.35); backdrop-filter: blur(2px); }
+    .modal-title{ font-family:"UnifrakturCook"; margin:.25rem 0 .5rem; }
+    .modal-body{ white-space:pre-wrap; line-height:1.5; }
+    .modal-actions{ display:flex; justify-content:flex-end; margin-top:1rem; }
+    .btn{ border:1px solid #e6dff5; border-radius:999px; padding:.55rem .9rem; background:#fff; cursor:pointer; }
+    .btn:hover{ background:#f7f3ff; }
+    .meta{ font-size:.85rem; opacity:.75; margin:.25rem 0 .75rem;}
+    footer{opacity:.7; font-size:.85rem; margin-bottom:1.5rem;}
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="sidebar">
-          <img src="https://media.tenor.com/HyCEde0nYMsAAAAi/blonde-big-eyes.gif" alt="sleepy GIF">
-        </div>
-        <div class="content">
-    <div class="journal-container">
-        <h1>talk to me...</h1>
-        <div class="journal-entry">
-            <textarea id="entry" placeholder="Write your entry here..."></textarea>
-            <button id="save-button">Save Entry</button>
-        </div>
-        <div class="entries-list">
-            <h2>Previous Entries</h2>
-            <ul id="entries">
-                <!-- Entries will be appended here -->
-            </ul>
-        </div>
+  <header>
+    <h1>✨ Sarah’s Digital Garden ✨</h1>
+    <p>little bubbles of quotes, notes, & curiosities</p>
+  </header>
+
+  <div class="controls">
+    <input id="search" type="search" placeholder="Filter bubbles… e.g., poetry, morning, joy" />
+  </div>
+
+  <main class="garden" id="garden"></main>
+
+  <footer>made with love & pastel pixels</footer>
+
+  <!-- Modal -->
+  <dialog id="modal">
+    <h3 class="modal-title" id="modalTitle"></h3>
+    <div class="meta" id="modalMeta"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn" id="closeBtn">Close</button>
     </div>
-    <script src="script.js"></script>
+  </dialog>
+
+  <script>
+    /* 🌸 EDIT THIS LIST with your quotes/links */
+    const NOTES = [
+      { title: "Morning glitter", text: "Begin anywhere. Begin gently. The day softens when you do.", tags:["morning","gentle"] },
+      { title: "Sappho fragment", text: "someone, I tell you, will remember us\nI say even in another time", tags:["poetry","sappho"] },
+      { title: "Web garden idea", text: "Let pages grow like plants—interlinked, imperfect, alive.", tags:["web","ideas"] },
+      { title: "On tenderness", url: "writing1.html", tags:["essay"] },
+      { title: "Favorite link", url: "https://example.com/sparkly", tags:["inspo"] },
+      { title: "Tiny prayer", text: "May I be quietly brave today.", tags:["prayer"] },
+    ];
+
+    const $ = s => document.querySelector(s);
+    const garden = $("#garden");
+    const dlg = $("#modal"), mTitle=$("#modalTitle"), mMeta=$("#modalMeta"), mBody=$("#modalBody");
+
+    function render(items){
+      garden.innerHTML = "";
+      items.forEach((item) => {
+        // wrapper that floats
+        const orb = document.createElement("div");
+        orb.className = "orb";
+
+        // the actual clickable bubble
+        const el = document.createElement(item.url ? "a" : "button");
+        el.className = "bubble";
+        el.setAttribute("aria-label", item.title);
+
+        if(item.url){
+          el.href = item.url;
+          el.target = item.url.startsWith("http") ? "_blank" : "_self";
+          el.rel = "noopener";
+        } else {
+          el.type = "button";
+          el.addEventListener("click", () => openModal(item));
+        }
+
+        // organic size variety
+        const size = 120 + Math.floor(Math.random()*60);
+        el.style.setProperty("--size", size + "px");
+
+        el.innerHTML = `<span>${item.title}</span>`;
+        orb.appendChild(el);
+        garden.appendChild(orb);
+      });
+    }
+
+    function openModal(item){
+      mTitle.textContent = item.title || "";
+      mMeta.textContent  = item.tags?.length ? "tags: " + item.tags.join(", ") : "";
+      mBody.textContent  = item.text || "";
+      dlg.showModal();
+    }
+    $("#closeBtn").addEventListener("click", ()=> dlg.close());
+    dlg.addEventListener("click", e => { if(e.target === dlg) dlg.close(); });
+
+    // simple search/filter
+    $("#search").addEventListener("input", (e)=>{
+      const q = e.target.value.toLowerCase().trim();
+      if(!q){ render(NOTES_SHUFFLED); return; }
+      const filtered = NOTES_SHUFFLED.filter(it=>{
+        const hay = (it.title||"")+" "+(it.text||"")+" "+(it.tags||[]).join(" ");
+        return hay.toLowerCase().includes(q);
+      });
+      render(filtered);
+    });
+
+    // randomize order for garden vibes
+    const NOTES_SHUFFLED = NOTES.slice().sort(()=> Math.random() - .5);
+    render(NOTES_SHUFFLED);
+  </script>
 </body>
 </html>
