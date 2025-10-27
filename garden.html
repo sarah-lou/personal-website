@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Digital Garden</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=IBM+Plex+Serif:wght@100;300&display=swap" rel="stylesheet">
+
+<style>
+:root{ --ink:#2c1d3f; --pink:#ffd1dc; --blue:#cfe5ff; --lav:#e5c7ff; }
+body{
+  margin:0; min-height:100svh; color:var(--ink);
+  font-family:"IBM Plex Serif",serif; display:flex; flex-direction:column; align-items:center;
+  background:
+    radial-gradient(1200px 800px at 10% 10%, var(--pink), transparent 60%),
+    radial-gradient(1000px 900px at 90% 30%, var(--blue), transparent 55%),
+    radial-gradient(1100px 900px at 50% 110%, var(--lav), transparent 55%),
+    #ffeef7;
+  background-attachment:fixed;
+}
+header{ text-align:center; padding:28px 16px 10px; }
+h1{ font-family:"DotGothic16",sans-serif; letter-spacing:.6px; margin:0; font-size:clamp(1.6rem,3.6vw,2.6rem); }
+.nav{ margin-top:6px; }
+a.back{ text-decoration:none; color:var(--ink); background:#ffffffb8; padding:.4rem .7rem; border-radius:999px; }
+
+.controls{
+  width:min(900px,92%); display:flex; gap:.6rem; margin:12px auto 6px; justify-content:center; flex-wrap:wrap;
+}
+input[type="search"]{
+  flex:1 1 280px; border:1px solid #e6dff5; border-radius:999px; padding:.7rem 1rem; background:#fff9ff;
+}
+
+.garden{
+  width:min(1100px,94%); margin:16px auto 60px;
+  display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:22px;
+}
+.orb{ display:grid; place-items:center; animation: drift 16s ease-in-out infinite alternate; }
+.orb:nth-child(3n){ animation-duration:18s } .orb:nth-child(5n){ animation-duration:20s }
+@keyframes drift{ 0%{transform:translate(0,0)} 50%{transform:translate(8px,-8px)} 100%{transform:translate(-6px,6px)} }
+
+.bubble{
+  --size: clamp(120px, 20vw, 170px);
+  width:var(--size); aspect-ratio:1; border-radius:50%;
+  display:grid; place-items:center; padding:16px; text-align:center; user-select:none;
+  background:
+    conic-gradient(from 180deg, #ffffff00 0 40%, #fff7 55%, #0000 65%),
+    linear-gradient(135deg, #ffb7d6, #c9d8ff 60%, #e8c7ff);
+  box-shadow: 0 10px 26px rgba(46, 20, 68,.18), inset 0 1px 8px #ffffffcc;
+  border:1px solid #ffffff66; text-decoration:none; color:var(--ink);
+  transition: transform .25s ease, box-shadow .25s ease, filter .25s ease;
+}
+.bubble:hover{ transform:scale(1.04); filter:saturate(1.08); box-shadow:0 16px 40px rgba(46,20,68,.28), inset 0 1px 10px #fff; }
+.bubble span{ font-family:"DotGothic16",sans-serif; font-size:1rem; line-height:1.15; }
+
+dialog{ border:none; border-radius:16px; width:min(720px,92%); background:#ffffffee; padding:1.2rem 1.2rem 1rem; box-shadow:0 30px 60px rgba(36,24,58,.25); }
+dialog::backdrop{ background:rgba(33,12,48,.35); backdrop-filter:blur(2px); }
+.modal-title{ font-family:"DotGothic16"; margin:.25rem 0 .5rem; }
+.meta{ opacity:.7; font-size:.9rem; margin:.2rem 0 .7rem }
+.btn{ border:1px solid #e6dff5; border-radius:999px; padding:.5rem .9rem; background:#fff; cursor:pointer; }
+.btn:hover{ background:#f7f3ff; }
+footer{ text-align:center; margin:24px 0 18px; opacity:.7; }
+@media (prefers-reduced-motion: reduce){ .orb{animation:none} }
+</style>
+</head>
+<body>
+  <header>
+    <h1>✨ sarah's digital garden ✨</h1>
+    <div class="nav"><a class="back" href="index.html">← back to portals</a></div>
+  </header>
+
+  <div class="controls">
+    <input id="search" type="search" placeholder="Filter bubbles… e.g., poetry, morning, joy">
+  </div>
+
+  <main class="garden" id="garden"></main>
+
+  <dialog id="modal">
+    <h3 class="modal-title" id="modalTitle"></h3>
+    <div class="meta" id="modalMeta"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:1rem;">
+      <button class="btn" id="closeBtn">Close</button>
+    </div>
+  </dialog>
+
+  <footer>made with love & pastel pixels</footer>
+
+<script>
+/* ✏️ EDIT THIS LIST */
+    const NOTES = [
+      { title: "practical ways to show yourself love", url: "https://medium.com/@sastewart14/practical-ways-to-show-yourself-love-4c1fa193def3", tags:["writing","medium"] },
+      { title: "morning glitter", text: "Begin again. Begin anywhere. Begin gently. The day softens when you do.", tags:["morning","gentle"] },
+      { title: "????", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", tags: ["memes"]},
+      { title: "research as a leisure activity - by celine nguyen", url: "https://substack.com/@celinenguyen/p-145011020", tags: ["essays","substack","external-writings"]},
+      { title: "notes on coming back to oneself", url: "https://medium.com/@sastewart14/notes-on-coming-back-to-oneself-dd63f4892aa8", tags:["writing","medium"] },
+      { title: "sappho fragment", text: "stand up and look at me, face to face \nmy friend, \nunloose the beauty of your eyes.......", tags:["poetry","sappho"] },
+      { title: "web garden idea", text: "Let pages grow like plants—interlinked, imperfect, alive.", tags:["web","ideas"] },
+      { title: "cool pudding", url: "https://pudding.cool/", tags: ["cool-sites"]},
+      { title: "milkbar no. 2", url: "https://ita.toys/scans/milkbar/milkbar2", tags:["cool-sites"]},
+      { title: "giggles", url: "https://yeet.ing/", tags:["memes"] },
+
+]
+
+const $=s=>document.querySelector(s);
+const garden=$("#garden"), dlg=$("#modal"), mTitle=$("#modalTitle"), mMeta=$("#modalMeta"), mBody=$("#modalBody");
+
+function render(items){
+  garden.innerHTML="";
+  items.forEach(item=>{
+    const orb=document.createElement("div"); orb.className="orb";
+    const el=document.createElement(item.url?"a":"button"); el.className="bubble"; el.setAttribute("aria-label", item.title);
+    if(item.url){ el.href=item.url; el.target=item.url.startsWith("http")?"_blank":"_self"; el.rel="noopener"; }
+    else{ el.type="button"; el.addEventListener("click",()=>openModal(item)); }
+    const size=120+Math.floor(Math.random()*60); el.style.setProperty("--size", size+"px");
+    el.innerHTML=`<span>${item.title}</span>`;
+    orb.appendChild(el); garden.appendChild(orb);
+  });
+}
+function openModal(item){ mTitle.textContent=item.title||""; mMeta.textContent=item.tags?.length?("tags: "+item.tags.join(", ")):""; mBody.textContent=item.text||""; dlg.showModal(); }
+$("#closeBtn").addEventListener("click",()=>dlg.close());
+dlg.addEventListener("click",(e)=>{ if(e.target===dlg) dlg.close(); });
+
+$("#search").addEventListener("input",(e)=>{
+  const q=e.target.value.toLowerCase().trim();
+  const filtered = q? NOTES.filter(it=>((it.title||"")+(it.text||"")+(it.tags||[]).join(" ")).toLowerCase().includes(q)) : NOTES;
+  render(filtered);
+});
+
+render(NOTES.slice().sort(()=>Math.random()-.5));
+</script>
+</body>
+</html>
