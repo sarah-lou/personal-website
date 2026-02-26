@@ -85,6 +85,27 @@
     /* main UI is above overlays */
     header, .wrap, .footerbar{ position: relative; z-index: 3; }
 
+    /* ===== SETTINGS MODAL ===== */
+.modal{
+  position: fixed; inset: 0;
+  display: none;
+  background: rgba(0,0,0,.45);
+  z-index: 10;
+}
+.modal.open{ display:block; }
+
+.modalSheet{
+  position: absolute;
+  left: 12px; right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  background: rgba(12,16,32,.92);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 22px;
+  padding: 14px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.55);
+  backdrop-filter: blur(14px);
+}
+
     header{
       padding: calc(16px + env(safe-area-inset-top)) 16px 10px;
       position: sticky;
@@ -369,14 +390,31 @@
   </div>
 
   <div class="footerbar">
-    <div class="row">
-      <button id="saveBtn" class="primary">Save</button>
-      <div class="row">
-        <button id="exportBtn">Export</button>
-        <button id="importBtn">Import</button>
-      </div>
+  <div class="row">
+    <button id="saveBtn" class="primary">Save</button>
+    <button id="settingsBtn">⚙️</button>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="modal" aria-hidden="true">
+  <div class="modalSheet" role="dialog" aria-modal="true" aria-label="Settings">
+    <div class="row" style="justify-content:space-between; margin-bottom:10px;">
+      <div style="font-weight:800;">Settings</div>
+      <button id="closeSettingsBtn" class="ghost" style="padding:8px 10px;">✕</button>
+    </div>
+
+    <div class="row" style="gap:10px;">
+      <button id="exportBtn">Export</button>
+      <button id="importBtn">Import</button>
+      <button id="resetTodayBtn" class="warn">Reset day</button>
+    </div>
+
+    <div class="tiny" style="margin-top:10px;">
+      Export/Import copies your saved data so you can back it up or move it to another device.
     </div>
   </div>
+</div>
 
 <script>
 const STORAGE_KEY = "sarah_lifts_5machines_v3";
@@ -450,10 +488,17 @@ function getDay(id) {
   return state.days.find(d => d.id === id) || state.days[0];
 }
 
+function topOfRange(repRange){
+  // handles "8–12" (en-dash) and "8-12" (hyphen)
+  const parts = String(repRange).split(/–|-/).map(s => s.trim());
+  const top = parts[1] ? parts[1] : parts[0];
+  return top || "";
+}
+
 function ensureLiftLog(dayId, lift) {
   state.log[dayId] ||= {};
   state.log[dayId][lift.id] ||= {
-    sets: Array.from({ length: lift.sets }, () => ({ reps: "", weight: lift.weight, done: false }))
+    sets: Array.from({ length: lift.sets }, () => ({ reps: topOfRange(lift.repRange), weight: lift.weight, done: false }))
   };
   const entry = state.log[dayId][lift.id];
   while (entry.sets.length < lift.sets) entry.sets.push({ reps:"", weight: lift.weight, done:false });
@@ -486,7 +531,7 @@ function liftBlock(dayId, lift) {
   const acc = document.createElement("div");
   acc.className = "accordion";
 
-  // Header (click to open/close)
+  // Header (tap to open/close)
   const head = document.createElement("div");
   head.className = "accHead";
 
@@ -499,48 +544,11 @@ function liftBlock(dayId, lift) {
     </div>
   `;
 
-  const right = document.createElement("div");
-  right.className = "row";
-  right.style.gap = "8px";
-  right.style.justifyContent = "flex-end";
-
-  // Keep manual add (small)
-  const addBtn = document.createElement("button");
-  addBtn.textContent = `+${lift.increment}`;
-  addBtn.title = "Manual +5 to the default for next time.";
-  addBtn.onclick = (e) => {
-    e.stopPropagation(); // don't toggle accordion
-    lift.weight = Number(lift.weight || 0) + Number(lift.increment || 0);
-    entry.sets.forEach(s => {
-      const prev = Number(lift.weight) - Number(lift.increment);
-      if (s.weight === "" || s.weight === null || Number(s.weight) === 0 || Number(s.weight) === prev) {
-        s.weight = lift.weight;
-      }
-    });
-    render();
-  };
-
-  const successBtn = document.createElement("button");
-  successBtn.className = "good";
-  successBtn.textContent = `✅ Top (+${lift.increment})`;
-  successBtn.title = "Hit top range on all sets → progresses +5 for next time.";
-  successBtn.onclick = (e) => {
-    e.stopPropagation(); // don't toggle accordion
-    entry.sets.forEach(s => s.done = true);
-    lift.weight = Number(lift.weight || 0) + Number(lift.increment || 0);
-    entry.sets.forEach(s => s.weight = lift.weight);
-    render();
-  };
-
   const chev = document.createElement("div");
   chev.className = "chev";
   chev.textContent = "›";
 
-  right.appendChild(addBtn);
-  right.appendChild(successBtn);
-
   head.appendChild(left);
-  head.appendChild(right);
   head.appendChild(chev);
 
   head.onclick = () => {
@@ -562,22 +570,22 @@ function liftBlock(dayId, lift) {
 
     const tag = document.createElement("div");
     tag.className = "setTag";
-    tag.textContent = `Set ${idx+1}`;
+    tag.textContent = `Set ${idx + 1}`;
 
     const reps = document.createElement("input");
     reps.className = "miniInput";
     reps.inputMode = "numeric";
     reps.placeholder = "Reps";
-    reps.value = s.reps;
-    reps.setAttribute("aria-label", `Set ${idx+1} reps`);
+    reps.value = s.reps ?? "";
+    reps.setAttribute("aria-label", `Set ${idx + 1} reps`);
     reps.oninput = () => { s.reps = reps.value; };
 
     const wt = document.createElement("input");
     wt.className = "miniInput";
     wt.inputMode = "decimal";
-    wt.placeholder = `Wt (lb)`;
-    wt.value = s.weight;
-    wt.setAttribute("aria-label", `Set ${idx+1} weight in pounds`);
+    wt.placeholder = "Wt (lb)";
+    wt.value = s.weight ?? "";
+    wt.setAttribute("aria-label", `Set ${idx + 1} weight in pounds`);
     wt.oninput = () => { s.weight = wt.value; };
 
     const done = document.createElement("div");
@@ -585,7 +593,7 @@ function liftBlock(dayId, lift) {
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.checked = !!s.done;
-    cb.setAttribute("aria-label", `Set ${idx+1} done`);
+    cb.setAttribute("aria-label", `Set ${idx + 1} done`);
     cb.onchange = () => { s.done = cb.checked; };
     done.appendChild(cb);
 
@@ -597,20 +605,52 @@ function liftBlock(dayId, lift) {
     sets.appendChild(row);
   });
 
+  // Buttons moved to bottom (prevents iOS header-collapse bug)
+  const addBtn = document.createElement("button");
+  addBtn.textContent = `Manual +${lift.increment}`;
+  addBtn.title = "Manually increase this lift’s default weight for next time.";
+  addBtn.onclick = () => {
+    lift.weight = Number(lift.weight || 0) + Number(lift.increment || 0);
+
+    // If set weights are blank/0 or were the previous default, bump them too
+    const prev = Number(lift.weight) - Number(lift.increment || 0);
+    entry.sets.forEach(s => {
+      const w = Number(s.weight || 0);
+      if (!s.weight || w === 0 || w === prev) s.weight = lift.weight;
+    });
+
+    render();
+  };
+
+  const successBtn = document.createElement("button");
+  successBtn.className = "good";
+  successBtn.textContent = `✅ Hit top range (+${lift.increment})`;
+  successBtn.title = "Mark all sets done + progress +5 for next time.";
+  successBtn.onclick = () => {
+    entry.sets.forEach(s => s.done = true);
+    lift.weight = Number(lift.weight || 0) + Number(lift.increment || 0);
+    entry.sets.forEach(s => s.weight = lift.weight);
+    render();
+  };
+
+  const btnRow = document.createElement("div");
+  btnRow.className = "row";
+  btnRow.style.marginTop = "12px";
+  btnRow.style.justifyContent = "space-between";
+  btnRow.appendChild(addBtn);
+  btnRow.appendChild(successBtn);
+
   const helper = document.createElement("div");
   helper.className = "tiny";
   helper.style.marginTop = "10px";
-  helper.textContent = "If you hit the TOP of the rep range on all sets with good form, tap ✅ Top (+5).";
+  helper.textContent = "If you hit the TOP of the rep range on all sets with good form, tap ✅ Hit top range (+5).";
 
   body.appendChild(sets);
+  body.appendChild(btnRow);
   body.appendChild(helper);
 
   acc.appendChild(head);
   acc.appendChild(body);
-
-  // Default behavior: open the first lift so it’s not confusing
-  // (optional: remove if you want all collapsed)
-  // acc.classList.add("open");
 
   return acc;
 }
@@ -652,18 +692,22 @@ function render() {
   const dayId = state.currentDayId || state.days[0].id;
   const day = getDay(dayId);
 
+  // If the selectedDayTitle element exists, update it. Otherwise, do nothing.
+  const titleEl = document.getElementById("selectedDayTitle");
+  if (titleEl) titleEl.textContent = day.name;
+
   wireScheduleChips();
 
   const container = document.getElementById("workoutContainer");
   container.innerHTML = "";
 
-  if (day.type !== "lift") {
+    if (day.type !== "lift") {
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `<h2>${day.name}</h2>
       <div class="tiny">
         ${day.type === "walk"
-          ? "Today is a walk day. Aim for a comfy 20–40 minutes, or follow your current walking plan."
+          ? "Today is a walk day. Aim for a comfy 20–40 minutes."
           : "Full rest day. Gentle movement is fine, but no structured workout needed."}
       </div>`;
     container.appendChild(card);
@@ -674,10 +718,7 @@ function render() {
   card.className = "card";
   card.innerHTML = `<h2>${day.name}</h2>`;
 
-  // Warm-up checklist first
   card.appendChild(warmupBlock(dayId));
-
-  // Then the 5 machines
   state.liftConfig.forEach(lift => card.appendChild(liftBlock(dayId, lift)));
 
   container.appendChild(card);
@@ -724,6 +765,27 @@ document.getElementById("importBtn").addEventListener("click", () => {
   } catch {
     alert("Import failed — invalid JSON.");
   }
+});
+
+const settingsBtn = document.getElementById("settingsBtn");
+const settingsModal = document.getElementById("settingsModal");
+const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+
+function openSettings(){
+  settingsModal.classList.add("open");
+  settingsModal.setAttribute("aria-hidden", "false");
+}
+function closeSettings(){
+  settingsModal.classList.remove("open");
+  settingsModal.setAttribute("aria-hidden", "true");
+}
+
+settingsBtn.addEventListener("click", openSettings);
+closeSettingsBtn.addEventListener("click", closeSettings);
+
+// close if user taps the dark overlay
+settingsModal.addEventListener("click", (e) => {
+  if (e.target === settingsModal) closeSettings();
 });
 
 render();
