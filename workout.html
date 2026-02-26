@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Sarah Lifts</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background: #0b0f14; color: #eef2ff; }
+    header { padding: 16px 16px 10px; position: sticky; top: 0; background: rgba(11,15,20,.92); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,.08); }
+    h1 { margin: 0 0 6px; font-size: 18px; letter-spacing: .2px; }
+    .sub { font-size: 12px; opacity: .75; }
+    .wrap { padding: 14px 14px 90px; max-width: 760px; margin: 0 auto; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    button, input, select {
+      background: #141b24; color: #eef2ff; border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px; padding: 10px 12px; font-size: 14px;
+    }
+    button { cursor: pointer; }
+    button.primary { background: #2b5cff; border-color: rgba(43,92,255,.55); }
+    button.good { background: #1f8f5f; border-color: rgba(31,143,95,.55); }
+    button.warn { background: #b2452a; border-color: rgba(178,69,42,.55); }
+    button.ghost { background: transparent; }
+    .card {
+      background: #0f151d; border: 1px solid rgba(255,255,255,.10); border-radius: 16px;
+      padding: 14px; margin: 12px 0;
+    }
+    .card h2 { margin: 0 0 10px; font-size: 16px; }
+    .lift { border-top: 1px solid rgba(255,255,255,.08); padding-top: 12px; margin-top: 12px; }
+    .lift:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+    .liftname { font-weight: 650; }
+    .meta { font-size: 12px; opacity: .75; margin-top: 2px; line-height: 1.35; }
+    .sets { margin-top: 10px; display: grid; gap: 8px; }
+    .set { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
+    .set label { font-size: 12px; opacity: .8; display: block; margin-bottom: 4px; }
+    .field { display: flex; flex-direction: column; }
+    .tiny { font-size: 12px; opacity: .75; line-height: 1.35; }
+    .pill { font-size: 12px; padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); }
+    .done { background: rgba(31,143,95,.18); border-color: rgba(31,143,95,.35); }
+    .footerbar {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      background: rgba(11,15,20,.92); backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(255,255,255,.10);
+      padding: 12px 14px;
+    }
+    .footerbar .row { justify-content: space-between; }
+    .sectionTitle { font-weight: 650; margin-bottom: 6px; }
+    .chip { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:#141b24; font-size:12px; opacity:.9;}
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Sarah Lifts</h1>
+    <div class="sub">Lift plan tracker • saved on this device</div>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <h2>Weekly Schedule</h2>
+      <div class="row" style="gap:8px;">
+        <span class="chip">Mon — Lift</span>
+        <span class="chip">Tue — Walk</span>
+        <span class="chip">Wed — Lift</span>
+        <span class="chip">Thu — Walk/Rest</span>
+        <span class="chip">Fri — Lift</span>
+        <span class="chip">Sat — Optional Walk</span>
+        <span class="chip">Sun — Full Rest</span>
+      </div>
+      <div class="tiny" style="margin-top:10px;">
+        Lift days include warm-up + 5 machines. Progression rule: <b>add +5 lbs</b> when you hit the top of the rep range with good form.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <div class="tiny">Today</div>
+          <div class="row" style="margin-top:6px;">
+            <select id="daySelect"></select>
+            <button class="ghost" id="renameBtn" title="Rename day">✏️</button>
+          </div>
+        </div>
+        <div class="row">
+          <button id="resetTodayBtn" class="warn" title="Clears entries for this day">Reset</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="sectionTitle">Warm-up (Lift days)</div>
+        <div class="tiny">Treadmill — 5 minutes • Speed: <b>2.8–3.2 mph</b> • Incline: <b>3%</b></div>
+      </div>
+    </div>
+
+    <div id="workoutContainer"></div>
+
+    <div class="card">
+      <h2>Add to Home Screen</h2>
+      <div class="tiny">
+        On iPhone: open this page in Safari → Share → <b>Add to Home Screen</b> (you’ll get an app icon).
+      </div>
+    </div>
+  </div>
+
+  <div class="footerbar">
+    <div class="row">
+      <button id="saveBtn" class="primary">Save</button>
+      <div class="row">
+        <button id="exportBtn">Export</button>
+        <button id="importBtn">Import</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const STORAGE_KEY = "sarah_lifts_5machines_v1";
+
+// One lift template shared across lift days (Mon/Wed/Fri)
+const lifts = [
+  {
+    id: "legpress",
+    name: "Leg Press (feet high on platform)",
+    sets: 3,
+    repRange: "8–12",
+    notes: "Start light enough to finish 12 reps, but last 2 feel hard.",
+    rest: "90 sec",
+    increment: 5,
+    weight: 0
+  },
+  {
+    id: "hipthrust",
+    name: "Hip Thrust / Glute Bridge Machine",
+    sets: 3,
+    repRange: "8–10",
+    notes: "Pause 1 second at the top.",
+    rest: "90 sec",
+    increment: 5,
+    weight: 0
+  },
+  {
+    id: "latpulldown",
+    name: "Lat Pulldown",
+    sets: 3,
+    repRange: "8–12",
+    notes: "Pull elbows down toward ribs.",
+    rest: "60–90 sec",
+    increment: 5,
+    weight: 0
+  },
+  {
+    id: "shoulderpress",
+    name: "Shoulder Press Machine",
+    sets: 3,
+    repRange: "8–12",
+    notes: "",
+    rest: "60–90 sec",
+    increment: 5,
+    weight: 0
+  },
+  {
+    id: "legcurl",
+    name: "Seated Leg Curl",
+    sets: 3,
+    repRange: "10–12",
+    notes: "Control the lowering.",
+    rest: "60–90 sec",
+    increment: 5,
+    weight: 0
+  }
+];
+
+const defaultState = {
+  days: [
+    { id: "mon", name: "Monday (Lift)", type: "lift" },
+    { id: "tue", name: "Tuesday (Walk)", type: "walk" },
+    { id: "wed", name: "Wednesday (Lift)", type: "lift" },
+    { id: "thu", name: "Thursday (Walk / Rest)", type: "walk" },
+    { id: "fri", name: "Friday (Lift)", type: "lift" },
+    { id: "sat", name: "Saturday (Optional Walk)", type: "walk" },
+    { id: "sun", name: "Sunday (Full Rest)", type: "rest" }
+  ],
+  currentDayId: "mon",
+  liftConfig: structuredClone(lifts), // stores current weights
+  log: {} // log[dayId][liftId] = { sets:[{reps, weight, done}] }
+};
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return structuredClone(defaultState);
+    const parsed = JSON.parse(raw);
+    // merge in case you update file later
+    return { ...structuredClone(defaultState), ...parsed };
+  } catch {
+    return structuredClone(defaultState);
+  }
+}
+
+let state = loadState();
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function getDay(id) {
+  return state.days.find(d => d.id === id) || state.days[0];
+}
+
+function ensureLiftLog(dayId, lift) {
+  state.log[dayId] ||= {};
+  state.log[dayId][lift.id] ||= {
+    sets: Array.from({ length: lift.sets }, () => ({ reps: "", weight: lift.weight, done: false }))
+  };
+  const entry = state.log[dayId][lift.id];
+  while (entry.sets.length < lift.sets) entry.sets.push({ reps:"", weight: lift.weight, done:false });
+  if (entry.sets.length > lift.sets) entry.sets = entry.sets.slice(0, lift.sets);
+  return entry;
+}
+
+function renderDaySelector() {
+  const sel = document.getElementById("daySelect");
+  sel.innerHTML = "";
+  state.days.forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.id;
+    opt.textContent = d.name;
+    sel.appendChild(opt);
+  });
+  sel.value = state.currentDayId || state.days[0].id;
+
+  sel.onchange = () => {
+    state.currentDayId = sel.value;
+    render();
+  };
+}
+
+function liftBlock(dayId, lift) {
+  const entry = ensureLiftLog(dayId, lift);
+
+  const wrap = document.createElement("div");
+  wrap.className = "lift";
+
+  const top = document.createElement("div");
+  top.className = "row";
+  top.style.justifyContent = "space-between";
+
+  const left = document.createElement("div");
+  left.innerHTML = `
+    <div class="liftname">${lift.name}</div>
+    <div class="meta">
+      ${lift.sets} sets • reps ${lift.repRange} • rest ${lift.rest}${lift.notes ? " • " + lift.notes : ""}
+    </div>
+  `;
+
+  const right = document.createElement("div");
+  right.className = "row";
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "good";
+  addBtn.textContent = `Add +${lift.increment}`;
+  addBtn.title = "Increases this lift’s default weight for next time (+5 rule).";
+  addBtn.onclick = () => {
+    lift.weight = Number(lift.weight || 0) + Number(lift.increment || 0);
+    // Update set weights if they match the previous default
+    entry.sets.forEach(s => {
+      const prev = Number(lift.weight) - Number(lift.increment);
+      if (s.weight === "" || s.weight === null || Number(s.weight) === 0 || Number(s.weight) === prev) {
+        s.weight = lift.weight;
+      }
+    });
+    render();
+  };
+
+  const setAllBtn = document.createElement("button");
+  setAllBtn.textContent = "Set all";
+  setAllBtn.title = "Set every set’s weight to the current lift weight.";
+  setAllBtn.onclick = () => {
+    entry.sets.forEach(s => s.weight = lift.weight);
+    render();
+  };
+
+  right.appendChild(addBtn);
+  right.appendChild(setAllBtn);
+
+  top.appendChild(left);
+  top.appendChild(right);
+  wrap.appendChild(top);
+
+  const sets = document.createElement("div");
+  sets.className = "sets";
+
+  entry.sets.forEach((s, idx) => {
+    const row = document.createElement("div");
+    row.className = "set";
+
+    const repsField = document.createElement("div");
+    repsField.className = "field";
+    repsField.innerHTML = `<label>Set ${idx+1} reps</label>`;
+    const repsInput = document.createElement("input");
+    repsInput.inputMode = "numeric";
+    repsInput.placeholder = lift.repRange.split("–")[1] || "";
+    repsInput.value = s.reps;
+    repsInput.oninput = () => { s.reps = repsInput.value; };
+    repsField.appendChild(repsInput);
+
+    const weightField = document.createElement("div");
+    weightField.className = "field";
+    weightField.innerHTML = `<label>Weight (lb)</label>`;
+    const weightInput = document.createElement("input");
+    weightInput.inputMode = "decimal";
+    weightInput.placeholder = String(lift.weight || 0);
+    weightInput.value = s.weight;
+    weightInput.oninput = () => { s.weight = weightInput.value; };
+    weightField.appendChild(weightInput);
+
+    const doneField = document.createElement("div");
+    doneField.className = "field";
+    doneField.innerHTML = `<label>Done</label>`;
+    const doneBtn = document.createElement("button");
+    doneBtn.className = "pill" + (s.done ? " done" : "");
+    doneBtn.textContent = s.done ? "✅" : "⬜️";
+    doneBtn.onclick = () => { s.done = !s.done; render(); };
+    doneField.appendChild(doneBtn);
+
+    row.appendChild(repsField);
+    row.appendChild(weightField);
+    row.appendChild(doneField);
+
+    sets.appendChild(row);
+  });
+
+  wrap.appendChild(sets);
+
+  const helper = document.createElement("div");
+  helper.className = "tiny";
+  helper.style.marginTop = "10px";
+  helper.textContent = "When you can hit the TOP of the range on all sets with good form, tap Add +5 for next time.";
+  wrap.appendChild(helper);
+
+  return wrap;
+}
+
+function render() {
+  renderDaySelector();
+
+  const dayId = state.currentDayId || state.days[0].id;
+  const day = getDay(dayId);
+
+  const container = document.getElementById("workoutContainer");
+  container.innerHTML = "";
+
+  if (day.type !== "lift") {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `<h2>${day.name}</h2>
+      <div class="tiny">
+        ${day.type === "walk"
+          ? "Today is a walk day. Aim for a comfy 20–40 minutes, or follow your current walking plan."
+          : "Full rest day. Gentle movement is fine, but no structured workout needed."}
+      </div>`;
+    container.appendChild(card);
+    return;
+  }
+
+  // lift day
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `<h2>${day.name}</h2>`;
+
+  state.liftConfig.forEach(lift => card.appendChild(liftBlock(dayId, lift)));
+  container.appendChild(card);
+}
+
+document.getElementById("saveBtn").addEventListener("click", () => {
+  saveState();
+  alert("Saved ✅");
+});
+
+document.getElementById("resetTodayBtn").addEventListener("click", () => {
+  const dayId = state.currentDayId || state.days[0].id;
+  const day = getDay(dayId);
+  if (!confirm(`Reset entries for ${day.name}?`)) return;
+  state.log[dayId] = {};
+  if (day.type === "lift") state.liftConfig.forEach(l => ensureLiftLog(dayId, l));
+  saveState();
+  render();
+});
+
+document.getElementById("renameBtn").addEventListener("click", () => {
+  const id = state.currentDayId || state.days[0].id;
+  const d = state.days.find(x => x.id === id);
+  const name = prompt("Day label:", d.name);
+  if (name) { d.name = name; saveState(); render(); }
+});
+
+document.getElementById("exportBtn").addEventListener("click", async () => {
+  const data = JSON.stringify(state, null, 2);
+  try {
+    await navigator.clipboard.writeText(data);
+    alert("Export copied ✅");
+  } catch {
+    prompt("Copy this export:", data);
+  }
+});
+
+document.getElementById("importBtn").addEventListener("click", () => {
+  const data = prompt("Paste export JSON:");
+  if (!data) return;
+  try {
+    state = JSON.parse(data);
+    saveState();
+    render();
+    alert("Imported ✅");
+  } catch {
+    alert("Import failed — invalid JSON.");
+  }
+});
+
+render();
+</script>
+</body>
+</html>
