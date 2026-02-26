@@ -365,18 +365,6 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="row" style="justify-content:space-between;">
-        <div>
-          <div class="tiny">Selected day</div>
-          <div id="selectedDayTitle" style="margin-top:6px; font-weight:700; font-size:18px;">Monday (Lift)</div>
-        </div>
-        <div class="row">
-          <button id="resetTodayBtn" class="warn" title="Clears entries for this day">Reset</button>
-        </div>
-      </div>
-    </div>
-
     <div id="workoutContainer"></div>
   </div>
 
@@ -663,8 +651,6 @@ function warmupBlock(dayId){
 function render() {
   const dayId = state.currentDayId || state.days[0].id;
   const day = getDay(dayId);
-
-  document.getElementById("selectedDayTitle").textContent = day.name;
 
   wireScheduleChips();
 
