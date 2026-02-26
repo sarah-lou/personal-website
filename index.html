@@ -21,7 +21,7 @@
 /* dreamy cloudy bg */
 body{
   margin:0; min-height:100svh; color:var(--ink);
-  font-family:"IBM Plex Serif",serif; display:grid; place-items:center; overflow:hidden;
+  font-family:"IBM Plex Serif",serif; display:grid; place-items:center; overflow-x:hidden; overflow-y: auto;
   background:
     radial-gradient(1100px 800px at 10% 10%, var(--pink), transparent 60%),
     radial-gradient(900px 900px at 90% 30%, var(--blue), transparent 55%),
@@ -35,43 +35,82 @@ header{ text-align:center; margin-top:min(8vh,60px); padding:0 16px; }
 h1{ font-family:"DotGothic16",sans-serif; font-size:clamp(1.6rem,4vw,2.8rem); letter-spacing:.5px; margin:.2rem 0;}
 .sub{ opacity:.8; }
 
-/* portals row */
+/* portals grid */
 .main{
-  width:min(1300px,94%);
+  width:min(1000px,92%);
   margin: min(4vh,30px) auto;
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap:30px;
-  place-items:center;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap:18px;
+  place-items: stretch;
 }
+
+/* NEW: portal cards instead of bubbles */
 .portal{
-  --size: clamp(200px, 28vw, 320px);
-  width:var(--size); aspect-ratio:1; border-radius:50%;
-  position:relative; display:grid; place-items:center; text-decoration:none; color:var(--ink);
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  color:var(--ink);
+  padding:22px 18px;
+  border-radius:22px;
+  min-height:120px;
+
   background:
-    conic-gradient(from 0deg, #fff0 0 40%, #fff6 60%, #fff0 70%),
-    radial-gradient(circle at 50% 50%, #ffffff99 0 35%, #ffffff44 60%, #ffffff00 61%),
+    radial-gradient(circle at 20% 30%, #ffffffcc 0 18%, transparent 45%),
+    radial-gradient(circle at 80% 70%, #ffffffaa 0 16%, transparent 45%),
     linear-gradient(135deg, var(--glow1), var(--glow2) 60%, var(--glow3));
+
   box-shadow:
-    0 10px 25px rgba(46, 20, 68,.18),
+    0 10px 25px rgba(46, 20, 68,.16),
     inset 0 1px 10px #ffffffaa;
-  transition: transform .35s ease, filter .35s ease, box-shadow .35s ease;
+
+  transition: transform .25s ease, filter .25s ease, box-shadow .25s ease;
   isolation:isolate;
-  animation: bob 9s ease-in-out infinite alternate;
+  overflow:hidden;
 }
-@keyframes bob{
-  0%{ transform:translateY(0) }
-  50%{ transform:translateY(-6px) }
-  100%{ transform:translateY(2px) }
+
+/* animated “portal shimmer ring” */
+.portal::before{
+  content:"";
+  position:absolute;
+  inset:-40%;
+  background: conic-gradient(from 180deg, #ffffff00, #ffffff88, #ffffff00 60%);
+  filter: blur(2px);
+  opacity:.55;
+  animation: spin 8s linear infinite;
 }
-.portal:hover{ transform:scale(1.04); filter:saturate(1.06);
-  box-shadow: 0 16px 40px rgba(46,20,68,.28), inset 0 1px 12px #ffffffdd;}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.portal:hover{
+  transform: translateY(-3px) scale(1.01);
+  filter:saturate(1.06);
+  box-shadow: 0 16px 40px rgba(46,20,68,.22), inset 0 1px 12px #ffffffdd;
+}
+
 .portal:focus-visible{ outline:3px solid #fff; outline-offset:4px; }
 
+.portal.garden { --glow1:#ffd1dc; --glow2:#cfe5ff; --glow3:#e5c7ff; }
+.portal.blog   { --glow1:#cfe5ff; --glow2:#e5c7ff; --glow3:#ffd1dc; }
+.portal.lift   { --glow1:#e5c7ff; --glow2:#ffd1dc; --glow3:#cfe5ff; }
+
+.portal:active{
+  transform: translateY(-1px) scale(0.99);
+}
+
+/* label can be a bit larger now */
 .label{
-  text-align:center; padding:12px 16px; border-radius:16px;
-  background:#ffffffbf; backdrop-filter: blur(2px);
-  font-family:"DotGothic16",sans-serif; font-size:clamp(1rem,2.2vw,1.4rem);
+  position:relative;
+  z-index:2;
+  text-align:center;
+  padding:14px 18px;
+  border-radius:18px;
+  background:#ffffffc9;
+  backdrop-filter: blur(3px);
+  font-family:"DotGothic16",sans-serif;
+  font-size:clamp(1.05rem,1.4vw,1.35rem);
   box-shadow:0 6px 18px rgba(46,20,68,.18);
 }
 
@@ -80,7 +119,8 @@ footer{ position:fixed; bottom:14px; width:100%; text-align:center; opacity:.7; 
 
 /* reduce motion */
 @media (prefers-reduced-motion: reduce){
-  .portal{ animation:none }
+  .portal::before{ animation:none }
+  .cloud{ animation:none }
   body::after{ animation:none }
 }
 
@@ -140,10 +180,7 @@ body::before {
   mix-blend-mode: overlay;
   pointer-events: none;
 }
-@media (prefers-reduced-motion: reduce) {
-  .cloud { animation: none; }
-  body::after { animation: none; }
-}
+
 </style>
 </head>
 <body>
@@ -160,13 +197,13 @@ body::before {
     </header>
 
     <main class="main">
-      <a class="portal" href="garden.html" aria-label="Enter the Digital Garden">
+      <a class="portal garden" href="garden.html" aria-label="Enter the Digital Garden">
         <div class="label">enter da digital garden<br>⋆˚✿˖°</div>
       </a>
-      <a class="portal" href="blog/index.html" aria-label="Enter the Blog">
+      <a class="portal blog" href="blog/index.html" aria-label="Enter the Blog">
         <div class="label">enter da blog<br>⋆.˚☁️⋆</div>
       </a>
-      <a class="portal" href="workout.html" aria-label="Enter Sarah Lifts">
+      <a class="portal lift" href="workout.html" aria-label="Enter Sarah Lifts">
         <div class="label">enter da lift portal<br>⋆˚🏋️‍♀️˖°</div>
       </a>
 
