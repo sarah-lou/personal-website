@@ -39,6 +39,7 @@
     .tiny { font-size: 12px; opacity: .75; line-height: 1.35; }
     .pill { font-size: 12px; padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); }
     .done { background: rgba(31,143,95,.18); border-color: rgba(31,143,95,.35); }
+
     .footerbar {
       position: fixed; left: 0; right: 0; bottom: 0;
       background: rgba(11,15,20,.92); backdrop-filter: blur(10px);
@@ -46,8 +47,19 @@
       padding: 12px 14px;
     }
     .footerbar .row { justify-content: space-between; }
+
     .sectionTitle { font-weight: 650; margin-bottom: 6px; }
     .chip { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:#141b24; font-size:12px; opacity:.9;}
+
+    /* ✅ Mobile fix: stack each set row so nothing overflows */
+    @media (max-width: 520px){
+      .set{
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .pill{ width: 100%; }
+      input{ width: 100%; box-sizing: border-box; }
+    }
   </style>
 </head>
 
@@ -64,7 +76,7 @@
         <span class="chip">Mon — Lift</span>
         <span class="chip">Tue — Walk</span>
         <span class="chip">Wed — Lift</span>
-        <span class="chip">Thu — Walk/Rest</span>
+        <span class="chip">Thu — Walk</span>
         <span class="chip">Fri — Lift</span>
         <span class="chip">Sat — Optional Walk</span>
         <span class="chip">Sun — Full Rest</span>
@@ -95,13 +107,6 @@
     </div>
 
     <div id="workoutContainer"></div>
-
-    <div class="card">
-      <h2>Add to Home Screen</h2>
-      <div class="tiny">
-        On iPhone: open this page in Safari → Share → <b>Add to Home Screen</b> (you’ll get an app icon).
-      </div>
-    </div>
   </div>
 
   <div class="footerbar">
@@ -115,7 +120,15 @@
   </div>
 
 <script>
-const STORAGE_KEY = "sarah_lifts_5machines_v1";
+const STORAGE_KEY = "sarah_lifts_5machines_v2";
+
+/** Week key so we can auto-clear logs each new week (keeps lift weights) */
+function weekKey(d = new Date()){
+  const onejan = new Date(d.getFullYear(),0,1);
+  const dayMs = 86400000;
+  const week = Math.ceil((((d - onejan) / dayMs) + onejan.getDay()+1) / 7);
+  return `${d.getFullYear()}-W${week}`;
+}
 
 // One lift template shared across lift days (Mon/Wed/Fri)
 const lifts = [
@@ -176,14 +189,15 @@ const defaultState = {
     { id: "mon", name: "Monday (Lift)", type: "lift" },
     { id: "tue", name: "Tuesday (Walk)", type: "walk" },
     { id: "wed", name: "Wednesday (Lift)", type: "lift" },
-    { id: "thu", name: "Thursday (Walk / Rest)", type: "walk" },
+    { id: "thu", name: "Thursday (Walk)", type: "walk" },
     { id: "fri", name: "Friday (Lift)", type: "lift" },
     { id: "sat", name: "Saturday (Optional Walk)", type: "walk" },
     { id: "sun", name: "Sunday (Full Rest)", type: "rest" }
   ],
   currentDayId: "mon",
   liftConfig: structuredClone(lifts), // stores current weights
-  log: {} // log[dayId][liftId] = { sets:[{reps, weight, done}] }
+  log: {}, // log[dayId][liftId] = { sets:[{reps, weight, done}] }
+  lastWeekKey: weekKey()
 };
 
 function loadState() {
@@ -191,7 +205,6 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return structuredClone(defaultState);
     const parsed = JSON.parse(raw);
-    // merge in case you update file later
     return { ...structuredClone(defaultState), ...parsed };
   } catch {
     return structuredClone(defaultState);
@@ -203,6 +216,16 @@ let state = loadState();
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
+
+/** Auto-clear daily logs each new week, but keep lift weights (liftConfig) */
+(function weeklyReset(){
+  const current = weekKey();
+  if (state.lastWeekKey !== current){
+    state.log = {};
+    state.lastWeekKey = current;
+    saveState();
+  }
+})();
 
 function getDay(id) {
   return state.days.find(d => d.id === id) || state.days[0];
@@ -257,10 +280,10 @@ function liftBlock(dayId, lift) {
   const right = document.createElement("div");
   right.className = "row";
 
+  // Keep manual add for edge cases
   const addBtn = document.createElement("button");
-  addBtn.className = "good";
-  addBtn.textContent = `Add +${lift.increment}`;
-  addBtn.title = "Increases this lift’s default weight for next time (+5 rule).";
+  addBtn.textContent = `Manual +${lift.increment}`;
+  addBtn.title = "Manually increases this lift’s default weight for next time.";
   addBtn.onclick = () => {
     lift.weight = Number(lift.weight || 0) + Number(lift.increment || 0);
     // Update set weights if they match the previous default
@@ -273,16 +296,26 @@ function liftBlock(dayId, lift) {
     render();
   };
 
-  const setAllBtn = document.createElement("button");
-  setAllBtn.textContent = "Set all";
-  setAllBtn.title = "Set every set’s weight to the current lift weight.";
-  setAllBtn.onclick = () => {
+  // ✅ Success button: marks done + progresses +5 for next time
+  const successBtn = document.createElement("button");
+  successBtn.className = "good";
+  successBtn.textContent = `✅ Hit top range (+${lift.increment})`;
+  successBtn.title = "Marks success and increases next time’s default weight (+5 rule).";
+  successBtn.onclick = () => {
+    // mark done for convenience
+    entry.sets.forEach(s => s.done = true);
+
+    // progress the default
+    lift.weight = Number(lift.weight || 0) + Number(lift.increment || 0);
+
+    // set current weights to the new default so next session starts clean
     entry.sets.forEach(s => s.weight = lift.weight);
+
     render();
   };
 
   right.appendChild(addBtn);
-  right.appendChild(setAllBtn);
+  right.appendChild(successBtn);
 
   top.appendChild(left);
   top.appendChild(right);
@@ -336,7 +369,7 @@ function liftBlock(dayId, lift) {
   const helper = document.createElement("div");
   helper.className = "tiny";
   helper.style.marginTop = "10px";
-  helper.textContent = "When you can hit the TOP of the range on all sets with good form, tap Add +5 for next time.";
+  helper.textContent = "When you can hit the TOP of the range on all sets with good form, tap ✅ Hit top range to add +5 for next time.";
   wrap.appendChild(helper);
 
   return wrap;
@@ -364,7 +397,6 @@ function render() {
     return;
   }
 
-  // lift day
   const card = document.createElement("div");
   card.className = "card";
   card.innerHTML = `<h2>${day.name}</h2>`;
