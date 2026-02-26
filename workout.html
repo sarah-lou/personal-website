@@ -240,9 +240,100 @@
     }
     .footerbar .row{ justify-content: space-between; }
 
-    /* Mobile layout: stack set fields so nothing overflows */
+    /* ===== ACCORDION LIFTS ===== */
+    .accordion {
+     border-top: 1px solid rgba(255,255,255,.08);
+     padding-top: 12px;
+     margin-top: 12px;
+    }
+    .accordion:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+
+    .accHead{
+     display:flex;
+     align-items:flex-start;
+     justify-content:space-between;
+     gap: 12px;
+     cursor:pointer;
+     user-select:none;
+     padding: 10px 12px;
+     border-radius: 16px;
+     border: 1px solid rgba(255,255,255,.10);
+     background: rgba(18,24,40,.55);
+    }
+    .accHead:active { transform: scale(.995); }
+
+    .accTitle{
+     font-weight: 800;
+     font-size: 18px;
+    }
+    .accMeta{
+     margin-top: 4px;
+     font-size: 12px;
+     color: var(--muted);
+     line-height: 1.35;
+    }
+
+    .chev{
+     font-size: 16px;
+     opacity: .75;
+     padding-top: 2px;
+     min-width: 24px;
+     text-align:right;
+    }
+
+    .accBody{
+     margin-top: 10px;
+     display:none;
+    }
+    .accordion.open .accBody{ display:block; }
+    .accordion.open .chev{ transform: rotate(90deg); }
+
+/* ===== COMPACT SET ROWS ===== */
+    .setsCompact{
+     display:grid;
+     gap: 10px;
+     margin-top: 12px;
+    }
+
+    .setRow{
+     display:grid;
+     grid-template-columns: 64px 1fr 1fr 56px;
+     gap: 10px;
+     align-items:center;
+     padding: 10px 12px;
+     border-radius: 16px;
+     border: 1px solid rgba(255,255,255,.10);
+     background: rgba(18,24,40,.55);
+    }
+
+    .setTag{
+     font-size: 12px;
+     color: rgba(238,242,255,.85);
+     opacity:.95;
+    }
+
+    .miniInput{
+     padding: 10px 10px;
+     border-radius: 14px;
+    }
+
+    .doneMini{
+     display:flex;
+     align-items:center;
+     justify-content:center;
+    }
+    .doneMini input[type="checkbox"]{
+     width: 24px;
+     height: 24px;
+     accent-color: var(--good);
+    }
+
+/* Mobile: still compact, but a little tighter */
     @media (max-width: 520px){
-      .set{ grid-template-columns: 1fr; }
+     .setRow{
+     grid-template-columns: 56px 1fr 1fr 48px;
+     gap: 8px;
+     }
     }
 
     @media (prefers-reduced-motion: reduce){
@@ -393,31 +484,44 @@ function wireScheduleChips(){
   });
 }
 
+function collapseOtherLifts(currentEl){
+  const parentCard = currentEl.closest(".card");
+  if (!parentCard) return;
+  parentCard.querySelectorAll(".accordion.open").forEach(el => {
+    if (el !== currentEl) el.classList.remove("open");
+  });
+}
+
 function liftBlock(dayId, lift) {
   const entry = ensureLiftLog(dayId, lift);
 
-  const wrap = document.createElement("div");
-  wrap.className = "lift";
+  const acc = document.createElement("div");
+  acc.className = "accordion";
 
-  const top = document.createElement("div");
-  top.className = "row";
-  top.style.justifyContent = "space-between";
+  // Header (click to open/close)
+  const head = document.createElement("div");
+  head.className = "accHead";
 
   const left = document.createElement("div");
+  left.style.flex = "1";
   left.innerHTML = `
-    <div class="liftname">${lift.name}</div>
-    <div class="meta">
+    <div class="accTitle">${lift.name}</div>
+    <div class="accMeta">
       ${lift.sets} sets • reps ${lift.repRange} • rest ${lift.rest}${lift.notes ? " • " + lift.notes : ""}
     </div>
   `;
 
   const right = document.createElement("div");
   right.className = "row";
+  right.style.gap = "8px";
+  right.style.justifyContent = "flex-end";
 
+  // Keep manual add (small)
   const addBtn = document.createElement("button");
-  addBtn.textContent = `Manual +${lift.increment}`;
-  addBtn.title = "Manually increases this lift’s default weight for next time.";
-  addBtn.onclick = () => {
+  addBtn.textContent = `+${lift.increment}`;
+  addBtn.title = "Manual +5 to the default for next time.";
+  addBtn.onclick = (e) => {
+    e.stopPropagation(); // don't toggle accordion
     lift.weight = Number(lift.weight || 0) + Number(lift.increment || 0);
     entry.sets.forEach(s => {
       const prev = Number(lift.weight) - Number(lift.increment);
@@ -430,86 +534,97 @@ function liftBlock(dayId, lift) {
 
   const successBtn = document.createElement("button");
   successBtn.className = "good";
-  successBtn.textContent = `✅ Hit top range (+${lift.increment})`;
-  successBtn.title = "Marks success and increases next time’s default weight (+5 rule).";
-  successBtn.onclick = () => {
+  successBtn.textContent = `✅ Top (+${lift.increment})`;
+  successBtn.title = "Hit top range on all sets → progresses +5 for next time.";
+  successBtn.onclick = (e) => {
+    e.stopPropagation(); // don't toggle accordion
     entry.sets.forEach(s => s.done = true);
     lift.weight = Number(lift.weight || 0) + Number(lift.increment || 0);
     entry.sets.forEach(s => s.weight = lift.weight);
     render();
   };
 
+  const chev = document.createElement("div");
+  chev.className = "chev";
+  chev.textContent = "›";
+
   right.appendChild(addBtn);
   right.appendChild(successBtn);
 
-  top.appendChild(left);
-  top.appendChild(right);
-  wrap.appendChild(top);
+  head.appendChild(left);
+  head.appendChild(right);
+  head.appendChild(chev);
+
+  head.onclick = () => {
+    const willOpen = !acc.classList.contains("open");
+    if (willOpen) collapseOtherLifts(acc);
+    acc.classList.toggle("open");
+  };
+
+  // Body
+  const body = document.createElement("div");
+  body.className = "accBody";
 
   const sets = document.createElement("div");
-  sets.className = "sets";
+  sets.className = "setsCompact";
 
   entry.sets.forEach((s, idx) => {
     const row = document.createElement("div");
-    row.className = "set";
+    row.className = "setRow";
 
-    const repsField = document.createElement("div");
-    repsField.className = "field";
-    repsField.innerHTML = `<label>Set ${idx+1} reps</label>`;
-    const repsInput = document.createElement("input");
-    repsInput.inputMode = "numeric";
-    repsInput.placeholder = (lift.repRange.split("–")[1] || "").trim();
-    repsInput.value = s.reps;
-    repsInput.oninput = () => { s.reps = repsInput.value; };
-    repsField.appendChild(repsInput);
+    const tag = document.createElement("div");
+    tag.className = "setTag";
+    tag.textContent = `Set ${idx+1}`;
 
-    const weightField = document.createElement("div");
-    weightField.className = "field";
-    weightField.innerHTML = `<label>Weight (lb)</label>`;
-    const weightInput = document.createElement("input");
-    weightInput.inputMode = "decimal";
-    weightInput.placeholder = String(lift.weight || 0);
-    weightInput.value = s.weight;
-    weightInput.oninput = () => { s.weight = weightInput.value; };
-    weightField.appendChild(weightInput);
+    const reps = document.createElement("input");
+    reps.className = "miniInput";
+    reps.inputMode = "numeric";
+    reps.placeholder = "Reps";
+    reps.value = s.reps;
+    reps.setAttribute("aria-label", `Set ${idx+1} reps`);
+    reps.oninput = () => { s.reps = reps.value; };
 
-    const doneField = document.createElement("div");
-    doneField.className = "field";
-    doneField.innerHTML = `<label>Done</label>`;
+    const wt = document.createElement("input");
+    wt.className = "miniInput";
+    wt.inputMode = "decimal";
+    wt.placeholder = `Wt (lb)`;
+    wt.value = s.weight;
+    wt.setAttribute("aria-label", `Set ${idx+1} weight in pounds`);
+    wt.oninput = () => { s.weight = wt.value; };
 
-    const checkWrap = document.createElement("div");
-    checkWrap.className = "checkRow";
+    const done = document.createElement("div");
+    done.className = "doneMini";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!s.done;
+    cb.setAttribute("aria-label", `Set ${idx+1} done`);
+    cb.onchange = () => { s.done = cb.checked; };
+    done.appendChild(cb);
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = !!s.done;
-    checkbox.onchange = () => { s.done = checkbox.checked; };
-
-    const checkLabel = document.createElement("div");
-    checkLabel.className = "tiny";
-    checkLabel.style.opacity = ".9";
-    checkLabel.textContent = "Done";
-
-    checkWrap.appendChild(checkbox);
-    checkWrap.appendChild(checkLabel);
-    doneField.appendChild(checkWrap);
-
-    row.appendChild(repsField);
-    row.appendChild(weightField);
-    row.appendChild(doneField);
+    row.appendChild(tag);
+    row.appendChild(reps);
+    row.appendChild(wt);
+    row.appendChild(done);
 
     sets.appendChild(row);
   });
 
-  wrap.appendChild(sets);
-
   const helper = document.createElement("div");
   helper.className = "tiny";
   helper.style.marginTop = "10px";
-  helper.textContent = "When you can hit the TOP of the range on all sets with good form, tap ✅ Hit top range to add +5 for next time.";
-  wrap.appendChild(helper);
+  helper.textContent = "If you hit the TOP of the rep range on all sets with good form, tap ✅ Top (+5).";
 
-  return wrap;
+  body.appendChild(sets);
+  body.appendChild(helper);
+
+  acc.appendChild(head);
+  acc.appendChild(body);
+
+  // Default behavior: open the first lift so it’s not confusing
+  // (optional: remove if you want all collapsed)
+  // acc.classList.add("open");
+
+  return acc;
 }
 
 function warmupBlock(dayId){
