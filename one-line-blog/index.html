@@ -12,14 +12,26 @@
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=IBM+Plex+Serif:wght@300&display=swap" rel="stylesheet">
 
 <style>
+@keyframes fadeIn{
+  from{
+    opacity:0;
+    transform:translateY(8px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
+
 body{
   background:#0f0b12;
   color:#ffd6e7;
   font-family:"IBM Plex Serif", serif;
-  max-width:700px;
+  max-width:620px;
   margin:auto;
   padding:60px 20px;
   line-height:1.8;
+  animation:fadeIn .45s ease-out;
 }
 
 h1{
@@ -27,6 +39,7 @@ h1{
   text-align:center;
   margin-bottom:8px;
   color:#fff0f7;
+  font-weight:400;
 }
 
 .subtitle{
@@ -42,14 +55,21 @@ h1{
 }
 
 .date{
-  font-size:.85rem;
-  color:#d8a8bc;
-  margin-bottom:8px;
+  color:#c995ad;
+  font-family:"DotGothic16", sans-serif;
+  font-size:.82rem;
+  letter-spacing:.08em;
+  margin-bottom:10px;
 }
 
 .text{
   font-size:1.2rem;
   color:#ffe3ef;
+}
+
+.entry:first-of-type .text{
+  color:#fff2f8;
+  text-shadow:0 0 14px rgba(255, 191, 216, .22);
 }
 
 .divider{
@@ -79,6 +99,12 @@ a:hover{
   background:#ffbfd8;
   color:#111;
 }
+
+@media (prefers-reduced-motion: reduce){
+  body{
+    animation:none;
+  }
+}
 </style>
 </head>
 
@@ -87,18 +113,41 @@ a:hover{
 <h1>one-line blog</h1>
 <div class="subtitle">small thoughts.</div>
 
-<div class="entry">
-<div class="date">July 5, 2026</div>
-<div class="text">
-today i am inspired and tired and can't believe it's already 7pm. psh
-</div>
-</div>
-
-<div class="divider">· · ·</div>
+<main id="entries"></main>
 
 <div class="back">
   <a href="../index.html">← return to the portals</a>
 </div>
+
+<script>
+const thoughts = [
+  "2026.07.05|today i am inspired and tired and can't believe it's already 7pm. psh",
+  "2026.07.04|this nothing. just a test. or is ittttttt"
+];
+
+const entries = document.getElementById("entries");
+
+thoughts.forEach((item, index) => {
+  const [date, text] = item.split("|");
+
+  const entry = document.createElement("div");
+  entry.className = "entry";
+
+  entry.innerHTML = `
+    <div class="date">${date}</div>
+    <div class="text">${text}</div>
+  `;
+
+  entries.appendChild(entry);
+
+  if (index < thoughts.length - 1) {
+    const divider = document.createElement("div");
+    divider.className = "divider";
+    divider.textContent = "· · ·";
+    entries.appendChild(divider);
+  }
+});
+</script>
 
 </body>
 </html>
